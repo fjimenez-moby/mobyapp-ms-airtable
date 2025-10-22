@@ -123,7 +123,7 @@ module.exports = (base) => {
 
     router.get('/getalluser', async (req, res) => {
         try{
-            const list = await AirtableService.getAllUsers(base);
+            const list = await AirtableService.getUsers(base);
             res.json(list);
         }
         catch (error){
@@ -134,7 +134,7 @@ module.exports = (base) => {
 
     router.get('/getallreferent', async (req, res) => {
         try{
-            const list = await AirtableService.getAllReferent(base);
+            const list = await AirtableService.getReferents(base);
             res.json(list);
         }
         catch (error){
@@ -145,12 +145,39 @@ module.exports = (base) => {
 
     router.get('/getallpartner', async (req, res) => {
         try{
-            const list = await AirtableService.getAllPartner(base);
+            const list = await AirtableService.getPartners(base);
             res.json(list);
         }
         catch (error){
             console.error("Error al obtener lista de Talent Partners:", error);
             res.status(500).json({error: "Error interno del servidor"});
+        }
+    });
+
+    router.get('/user/:email', async (req, res) => {
+
+        // 1. Obtención del email del Query Parameter
+        const email = req.params.email;
+
+        if (!email) {
+            // Esto debería ser capturado en el service, pero lo verificamos aquí por seguridad
+            return res.status(400).json({ error: "Parámetro 'email' es requerido." });
+        }
+
+        try {
+            // 2. Llamada a la función de servicio corregida (usando la variable 'email')
+            const userDTO = await AirtableService.getUserByEmail(base, email);
+
+            // 3. Envío del objeto JSON (esto lo mapea Java)
+            res.status(200).json(userDTO);
+
+        } catch (error) {
+            // 4. Manejo de errores
+            console.error("Error al buscar usuario:", error.message);
+            res.status(error.status || 500).json({
+                error: error.message,
+                status: error.status || 500
+            });
         }
     });
 
@@ -162,7 +189,7 @@ module.exports = (base) => {
                 return res.status(400).json({ error: "Debe enviar 'tec' como parámetro de consulta." });
             }
 
-            const list = await AirtableService.getByTechnology(base, tec);
+            const list = await AirtableService.getUsersByTechnology(base, tec);
             res.json(list);
         }
         catch (error){
