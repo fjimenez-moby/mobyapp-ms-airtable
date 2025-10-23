@@ -1,0 +1,38 @@
+# Pipeline repo GITHUB
+
+image: atlassian/default-image:3
+
+pipelines:
+  branches:
+    develop:
+      - step:
+          name: Clonar to GITHUB - Airtable Service
+          script: 
+            - echo "Sincronizando microservicio Airtable con Github"
+            
+            - git config --global user.email "ci@mobyapp.com"
+            - git config --global user.name "MobyApp CI"
+            
+            - git status
+            - git branch -a
+            #Se arma la URL con la autenticacion que se puso en las variables (token)
+            - GITHUB_URL_WITH_TOKEN=$(echo $GITHUB_REPO_URL | sed "s|https://|https://${GITHUB_TOKEN}@|")
+            # Se agrega Github como remote
+            - |
+              if git remote | grep -q github; then 
+                echo "Remote github ya existe, actualizando URL"
+                git remote set-url github $GITHUB_URL_WIH_TOKEN
+              else
+                echo "Agregando remote github"
+                git remote add github $GITHUB_URL_WITH_TOKEN
+              fi
+              
+            # Fetch para que se pueda vr el estado de github
+            - git fetch github || echo "Primera sincronizacion con github"
+            
+            # Push a github (develop -> main en github) 
+            - git push github develop:main --force
+            
+            - echo "Se sincronizo el user en github"
+            - echo "Railway pasa a detectar el cambio y se realiza el deploy" 
+            
