@@ -330,7 +330,7 @@ const updateUser = async (base, email, dtoFields) => {
     const updatedRecords = await base(AIRTABLE_TABLE_NAME_USERS_APP).update(updatePayload);
     const updatedRecord = updatedRecords[0];
     const updatedFields = updatedRecord.fields;
-
+    updatedFields["Foto de Perfil URL"] = await getUserProfilePicture(base, email);
     // Desnormalización
 
     // a. Proyectos (Vínculo Múltiple)
@@ -377,6 +377,34 @@ const updateUser = async (base, email, dtoFields) => {
     // Devuelve el registro con los campos desnormalizados
     return updatedRecord;
 };
+
+const updateUserPicture = async (base, email, pictureUrl) => {
+    if (!pictureUrl) {
+        throw new Error("Debe proporcionar la URL de la nueva foto.");
+    }
+
+    // Buscar usuario por email para obtener su ID en Airtable
+    const userEmailFieldName = "Correo Moby";
+    const records = await findRecordByField(base, AIRTABLE_TABLE_NAME_USERS_APP, userEmailFieldName, email);
+
+    if (records.length === 0) {
+        throw new Error(`Usuario con email ${email} no encontrado.`);
+    }
+
+    const userId = records[0].id;
+
+    console.log(pictureUrl)
+    // Ejecutar actualización tipo PATCH (solo campo picture)
+    const updatedRecords = await base(AIRTABLE_TABLE_NAME_USERS_APP).update([
+        {
+            id: userId,
+            fields: { "Foto de Perfil URL": pictureUrl }
+        }
+    ]);
+
+    return updatedRecords[0]; // Devuelve el registro actualizado
+};
+
 
 // GET /user (Verificación de existencia)
 const checkUserExists = async (base, email) => {
@@ -578,6 +606,32 @@ const getUsersByTechnology = async (base, technology) => {
 
     return users;
 };
+const getUserProfilePicture = async (base, email) => {
+    // Busca el registro por email
+    const records = await findRecordByField(
+        base,
+        AIRTABLE_TABLE_NAME_USERS_APP,
+        "Correo Moby",
+        email
+    );
+
+    if (records.length === 0) {
+        const error = new Error(`Usuario con email ${email} no encontrado.`);
+        error.status = 404;
+        throw error;
+    }
+
+    const userFields = records[0].fields;
+
+    // Si el campo es tipo URL:
+    const pictureUrl = userFields["Foto de Perfil URL"] | null;
+
+    // ⚠️ Si el campo fuera tipo Attachment (lista de objetos):
+    // const attachments = userFields["Foto de Perfil URL"];
+    // const pictureUrl = attachments?.[0]?.url  null;
+
+    return pictureUrl;
+};
 
 // Nuevo GET /user: Obtiene el UserDTO completo por email
 const getUserByEmail = async (base, email) => {
@@ -656,6 +710,7 @@ const getUserByEmail = async (base, email) => {
 module.exports = {
     migrateUser,
     updateUser,
+    updateUserPicture,
     checkUserExists,
     getUserFullName,
     checkEmailInPersonalTable,

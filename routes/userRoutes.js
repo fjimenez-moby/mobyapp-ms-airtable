@@ -83,6 +83,34 @@ module.exports = (base) => {
     }
 });
 
+    router.patch('/user/newPicture', async (req, res) => {
+        try {
+            const { email } = req.query;
+            const { pictureUrl } = req.body;
+            if (!email) {
+                return res.status(400).json({ error: "Debe enviar un email como parámetro (?email=...)" });
+            }
+
+            // El servicio updateUser ahora devuelve el registro desnormalizado
+            const updatedRecord = await AirtableService.updateUserPicture(base, email, pictureUrl);
+
+            // La respuesta utiliza los campos del registro devuelto,
+            res.json({
+                message: `Usuario con email ${email} actualizado exitosamente.`,
+                id: updatedRecord.id,
+                fields: updatedRecord.fields
+            });
+
+        } catch (error) {
+            console.error("Error al actualizar el usuario:", error.message);
+            // Manejo de errores específicos del PUT
+            const statusCode = error.message.includes("no puede estar vacío") ? 400 :
+                error.message.includes("no encontrado") ? 404 :
+                    500;
+            res.status(statusCode).json({ error: error.message });
+        }
+    });
+
     // Rutas de Verificación (sin el prefijo /records)    
     // GET /user/fullName
     // Nota: El prefijo de esta ruta DEBE ser cambiado en server.js
